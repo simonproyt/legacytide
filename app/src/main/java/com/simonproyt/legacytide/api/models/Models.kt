@@ -33,7 +33,8 @@ data class Playlist(
     val numberOfTracks: Int,
     val duration: Int,
     val image: String?, // uuid of image
-    val squareImage: String?
+    val squareImage: String?,
+    val isHeader: Boolean = false
 )
 
 data class Track(
@@ -43,7 +44,9 @@ data class Track(
     val trackNumber: Int,
     val volumeNumber: Int,
     val artist: Artist?,
-    val album: Album?
+    val artists: List<Artist>?,
+    val album: Album?,
+    val audioQuality: String?
 )
 
 data class Artist(

@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+temp_for_you.json
+temp_home.json
+.gitignore
+temp_mixes.json

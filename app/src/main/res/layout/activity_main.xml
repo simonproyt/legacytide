@@ -3,8 +3,69 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#121212">
+    android:background="#000000">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#222222">
+
+        <TextView
+            android:id="@+id/btn_nav_home"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="HOME"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textStyle="bold"
+            android:background="?android:attr/selectableItemBackground"
+            android:textColor="#FFFFFF"/>
+
+        <TextView
+            android:id="@+id/btn_nav_playlists"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="PLAYLISTS"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textStyle="bold"
+            android:background="?android:attr/selectableItemBackground"
+            android:textColor="#FFFFFF"/>
+
+        <TextView
+            android:id="@+id/btn_nav_search"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="SEARCH"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textStyle="bold"
+            android:background="?android:attr/selectableItemBackground"
+            android:textColor="#FFFFFF"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="My Playlists"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"/>
     
+    <ProgressBar
+        android:id="@+id/progress_playlists"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+        
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_playlists"
         android:layout_width="match_parent"

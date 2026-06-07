@@ -5,7 +5,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,14 +25,18 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var session: Session
     private lateinit var tidalService: TidalService
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: PlaylistAdapter
+    private lateinit var recyclerPlaylists: RecyclerView
+    private lateinit var progressPlaylists: ProgressBar
+    private lateinit var tvHeader: TextView
+    private lateinit var btnNavHome: TextView
+    private lateinit var btnNavPlaylists: TextView
+    private lateinit var btnNavSearch: TextView
+    private lateinit var playlistAdapter: PlaylistAdapter
     private lateinit var nowPlayingHelper: NowPlayingHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        title = "Your Playlists"
 
         val accessToken = intent.getStringExtra("ACCESS_TOKEN")
         val userId = intent.getLongExtra("USER_ID", -1)
@@ -48,23 +54,60 @@ class MainActivity : AppCompatActivity() {
         }
         tidalService = TidalService(session)
 
-        recyclerView = findViewById(R.id.recycler_playlists)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = PlaylistAdapter { playlist ->
+        try {
+            val picasso = Picasso.Builder(this)
+                .downloader(com.jakewharton.picasso.OkHttp3Downloader(session.client))
+                .build()
+            Picasso.setSingletonInstance(picasso)
+        } catch (e: Exception) {
+            // Picasso singleton already set
+        }
+
+        recyclerPlaylists = findViewById(R.id.recycler_playlists)
+        progressPlaylists = findViewById(R.id.progress_playlists)
+        tvHeader = findViewById(R.id.tv_header)
+        btnNavHome = findViewById(R.id.btn_nav_home)
+        btnNavPlaylists = findViewById(R.id.btn_nav_playlists)
+        btnNavSearch = findViewById(R.id.btn_nav_search)
+
+        playlistAdapter = PlaylistAdapter { playlist ->
             val intent = Intent(this, TracksActivity::class.java).apply {
+                putExtra("PLAYLIST_ID", playlist.uuid)
+                putExtra("PLAYLIST_TITLE", playlist.title)
                 putExtra("ACCESS_TOKEN", session.accessToken)
                 putExtra("USER_ID", session.userId)
                 putExtra("COUNTRY_CODE", session.countryCode)
-                putExtra("PLAYLIST_ID", playlist.uuid)
-                putExtra("PLAYLIST_TITLE", playlist.title)
             }
             startActivity(intent)
         }
-        recyclerView.adapter = adapter
+
+        recyclerPlaylists.layoutManager = LinearLayoutManager(this)
+        recyclerPlaylists.adapter = playlistAdapter
+
+        btnNavHome.setOnClickListener {
+            tvHeader.text = "My Mixes"
+            loadMixes()
+        }
+
+        btnNavPlaylists.setOnClickListener {
+            tvHeader.text = "My Playlists"
+            loadPlaylists()
+        }
+
+        btnNavSearch.setOnClickListener {
+            val intent = Intent(this, SearchActivity::class.java).apply {
+                putExtra("ACCESS_TOKEN", session.accessToken)
+                putExtra("USER_ID", session.userId)
+                putExtra("COUNTRY_CODE", session.countryCode)
+            }
+            startActivity(intent)
+        }
 
         nowPlayingHelper = NowPlayingHelper(this, session)
 
-        loadPlaylists()
+        // Default to Home
+        tvHeader.text = "My Mixes"
+        loadMixes()
     }
 
     override fun onResume() {
@@ -78,15 +121,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadPlaylists() {
+        progressPlaylists.visibility = View.VISIBLE
+        recyclerPlaylists.visibility = View.GONE
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val playlists = tidalService.getUserPlaylists()
                 withContext(Dispatchers.Main) {
-                    adapter.submitList(playlists)
+                    playlistAdapter.submitList(playlists)
+                    progressPlaylists.visibility = View.GONE
+                    recyclerPlaylists.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    progressPlaylists.visibility = View.GONE
                     android.widget.Toast.makeText(this@MainActivity, "Error loading playlists: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun loadMixes() {
+        progressPlaylists.visibility = View.VISIBLE
+        recyclerPlaylists.visibility = View.GONE
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val mixes = tidalService.getMixes()
+                withContext(Dispatchers.Main) {
+                    playlistAdapter.submitList(mixes)
+                    progressPlaylists.visibility = View.GONE
+                    recyclerPlaylists.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressPlaylists.visibility = View.GONE
+                    android.widget.Toast.makeText(this@MainActivity, "Error loading mixes: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -124,12 +192,34 @@ class MainActivity : AppCompatActivity() {
             }
 
             fun bind(playlist: Playlist) {
+                if (playlist.isHeader) {
+                    titleView.text = playlist.title
+                    titleView.textSize = 20f
+                    titleView.setTextColor(android.graphics.Color.parseColor("#55AADD"))
+                    descView.visibility = View.GONE
+                    artView.visibility = View.GONE
+                    itemView.isClickable = false
+                    return
+                }
+                
                 titleView.text = playlist.title
-                descView.text = "${playlist.numberOfTracks} tracks"
+                titleView.textSize = 16f
+                titleView.setTextColor(android.graphics.Color.WHITE)
+                descView.visibility = View.VISIBLE
+                artView.visibility = View.VISIBLE
+                itemView.isClickable = true
+                
+                if (playlist.numberOfTracks > 0) {
+                    descView.text = "${playlist.numberOfTracks} tracks"
+                } else if (!playlist.description.isNullOrEmpty()) {
+                    descView.text = playlist.description
+                } else {
+                    descView.text = ""
+                }
                 
                 val uuid = playlist.squareImage ?: playlist.image
                 if (uuid != null && uuid.isNotBlank()) {
-                    val imageUrl = "https://resources.tidal.com/images/${uuid.replace("-", "/")}/320x320.jpg"
+                    val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/320x320.jpg"
                     Picasso.with(itemView.context).load(imageUrl).into(artView)
                 } else {
                     artView.setImageDrawable(null)

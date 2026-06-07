@@ -23,9 +23,13 @@ class TracksActivity : AppCompatActivity() {
 
     private lateinit var session: Session
     private lateinit var tidalService: TidalService
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: TrackAdapter
+    private lateinit var recyclerTracks: RecyclerView
+    private lateinit var trackAdapter: TrackAdapter
     private lateinit var nowPlayingHelper: NowPlayingHelper
+    
+    private lateinit var btnNavHome: TextView
+    private lateinit var btnNavPlaylists: TextView
+    private lateinit var btnNavSearch: TextView
     private var playlistId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,8 +56,8 @@ class TracksActivity : AppCompatActivity() {
         }
         tidalService = TidalService(session)
 
-        adapter = TrackAdapter { track ->
-            PlaybackQueue.tracks = adapter.getTracks()
+        trackAdapter = TrackAdapter { track ->
+            PlaybackQueue.tracks = trackAdapter.getTracks()
             PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
             
             val intent = Intent(this, PlaybackService::class.java).apply {
@@ -64,9 +68,26 @@ class TracksActivity : AppCompatActivity() {
             }
             startService(intent)
         }
-        recyclerView = findViewById(R.id.recycler_tracks)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+        recyclerTracks = findViewById(R.id.recycler_tracks)
+        recyclerTracks.layoutManager = LinearLayoutManager(this)
+        
+        btnNavHome = findViewById(R.id.btn_nav_home)
+        btnNavPlaylists = findViewById(R.id.btn_nav_playlists)
+        btnNavSearch = findViewById(R.id.btn_nav_search)
+
+        btnNavHome.setOnClickListener { finish() }
+        btnNavPlaylists.setOnClickListener { finish() }
+        btnNavSearch.setOnClickListener {
+            val intent = Intent(this, SearchActivity::class.java).apply {
+                putExtra("ACCESS_TOKEN", session.accessToken)
+                putExtra("USER_ID", session.userId)
+                putExtra("COUNTRY_CODE", session.countryCode)
+            }
+            startActivity(intent)
+            finish()
+        }
+
+        recyclerTracks.adapter = trackAdapter
         
         nowPlayingHelper = NowPlayingHelper(this, session)
 
@@ -88,7 +109,7 @@ class TracksActivity : AppCompatActivity() {
             try {
                 val tracks = tidalService.getPlaylistTracks(playlistId)
                 withContext(Dispatchers.Main) {
-                    adapter.submitList(tracks)
+                    trackAdapter.submitList(tracks)
                     if (tracks.isEmpty()) {
                         android.widget.Toast.makeText(this@TracksActivity, "No tracks found", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -101,46 +122,5 @@ class TracksActivity : AppCompatActivity() {
         }
     }
 
-    inner class TrackAdapter(private val onClick: (Track) -> Unit) : RecyclerView.Adapter<TrackAdapter.ViewHolder>() {
-        private var items: List<Track> = emptyList()
 
-        fun submitList(newItems: List<Track>) {
-            items = newItems
-            notifyDataSetChanged()
-        }
-
-        fun getTracks(): List<Track> = items
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_track, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
-            holder.bind(item)
-            holder.itemView.setOnClickListener { onClick(item) }
-        }
-
-        override fun getItemCount() = items.size
-
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val titleView: TextView = itemView.findViewById(R.id.tv_track_title)
-            private val artistView: TextView = itemView.findViewById(R.id.tv_track_artist)
-            private val artView: ImageView = itemView.findViewById(R.id.img_track_art)
-
-            fun bind(track: Track) {
-                titleView.text = track.title
-                artistView.text = track.artist?.name ?: "Unknown Artist"
-                
-                val album = track.album
-                if (album != null && album.cover != null && album.cover.isNotBlank()) {
-                    val imageUrl = "https://resources.tidal.com/images/${album.cover.replace("-", "/")}/160x160.jpg"
-                    Picasso.with(itemView.context).load(imageUrl).into(artView)
-                } else {
-                    artView.setImageDrawable(null)
-                }
-            }
-        }
-    }
 }

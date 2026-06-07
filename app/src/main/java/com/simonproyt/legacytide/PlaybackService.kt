@@ -45,14 +45,18 @@ class PlaybackService : Service() {
         const val ACTION_TOGGLE_PLAYBACK = "com.simonproyt.legacytide.TOGGLE_PLAYBACK"
         const val ACTION_NEXT = "com.simonproyt.legacytide.NEXT"
         const val ACTION_PREVIOUS = "com.simonproyt.legacytide.PREVIOUS"
-        const val EXTRA_ACCESS_TOKEN = "ACCESS_TOKEN"
+        const val ACTION_CHANGE_QUALITY = "com.simonproyt.legacytide.CHANGE_QUALITY"
+        
+        const val EXTRA_ACCESS_TOKEN = "access_token"
         const val EXTRA_USER_ID = "USER_ID"
         const val EXTRA_COUNTRY_CODE = "COUNTRY_CODE"
+        const val EXTRA_TRACK_ID = "TRACK_ID"
         
         var currentTrackId: Long = -1L
         var currentTitle: String? = null
         var currentArtist: String? = null
         var currentCover: String? = null
+        var currentTrackQuality: String? = null
         var isPlaying: Boolean = false
     }
 
@@ -60,10 +64,10 @@ class PlaybackService : Service() {
         super.onCreate()
         val loadControl = com.google.android.exoplayer2.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                60000, // min buffer 60s
-                120000, // max buffer 120s
-                5000, // min buffer for playback 5s
-                10000 // min buffer for playback after rebuffer 10s
+                120000, // min buffer 120s
+                300000, // max buffer 300s (5 mins)
+                10000, // min buffer for playback 10s
+                20000 // min buffer for playback after rebuffer 20s
             ).build()
         player = ExoPlayer.Builder(this)
             .setLoadControl(loadControl)
@@ -112,6 +116,7 @@ class PlaybackService : Service() {
         intent.putExtra("TRACK_TITLE", currentTitle)
         intent.putExtra("TRACK_ARTIST", currentArtist)
         intent.putExtra("TRACK_COVER", currentCover)
+        intent.putExtra("TRACK_QUALITY", currentTrackQuality)
         intent.putExtra("IS_PLAYING", isPlaying)
         sendBroadcast(intent)
 
@@ -192,10 +197,15 @@ class PlaybackService : Service() {
                 PlaybackQueue.getCurrentTrack()?.let { track ->
                     currentTrackId = track.id
                     currentTitle = track.title
-                    currentArtist = track.artist?.name
-                    currentCover = track.album?.cover
+                    currentArtist = track.artist?.name ?: track.artists?.joinToString(", ") { it.name ?: "" } ?: "Unknown Artist"
+                    currentCover = track.album?.cover ?: ""
                     playTrack(track.id)
                 }
+            }
+        } else if (intent?.action == ACTION_CHANGE_QUALITY) {
+            val position = player?.currentPosition ?: 0L
+            if (currentTrackId != -1L) {
+                playTrack(currentTrackId, position)
             }
         } else if (intent?.action == ACTION_TOGGLE_PLAYBACK) {
             val playing = player?.playWhenReady ?: false
@@ -227,12 +237,20 @@ class PlaybackService : Service() {
             playTrack(track.id)
         }
     }
+    
+    private fun getAudioQuality(): String {
+        return getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
+            .getString("audio_quality", "HIGH") ?: "HIGH"
+    }
 
-    private fun playTrack(trackId: Long) {
+    private fun playTrack(trackId: Long, startPositionMs: Long = 0L) {
         broadcastState()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val playbackInfo = tidalService.getStreamManifest(trackId)
+                val track = tidalService.getTrack(trackId)
+                currentTrackQuality = track.audioQuality
+                val quality = getAudioQuality()
+                val playbackInfo = tidalService.getStreamManifest(trackId, quality)
                 withContext(Dispatchers.Main) {
                     if (playbackInfo != null) {
                         if (playbackInfo.manifestMimeType == "application/vnd.tidal.bts") {
@@ -260,6 +278,9 @@ class PlaybackService : Service() {
                         }
                         
                         player?.prepare()
+                        if (startPositionMs > 0) {
+                            player?.seekTo(startPositionMs)
+                        }
                         player?.playWhenReady = true
                     }
                 }

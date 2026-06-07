@@ -47,6 +47,7 @@ dependencies {
   implementation("androidx.recyclerview:recyclerview:1.3.2")
   implementation("androidx.media:media:1.6.0")
   implementation("com.squareup.picasso:picasso:2.5.2")
+  implementation("com.jakewharton.picasso:picasso2-okhttp3-downloader:1.1.0")
   implementation("androidx.multidex:multidex:2.0.1")
   
   // ExoPlayer for Audio Playback

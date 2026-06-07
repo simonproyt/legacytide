@@ -39,10 +39,12 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var btnPrev: ImageView
     private lateinit var btnNext: ImageView
     private lateinit var btnLyricsToggle: ImageView
+    private lateinit var btnQuality: TextView
     private lateinit var recyclerLyrics: androidx.recyclerview.widget.RecyclerView
     private lateinit var lyricsAdapter: LyricsAdapter
     private var currentLyricsList: List<com.simonproyt.legacytide.api.models.TimedLyric> = emptyList()
-    private var isLyricsVisible = true
+    private var isLyricsVisible = false
+    private var maxTrackQuality: String? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val updateProgressTask = object : Runnable {
@@ -73,6 +75,9 @@ class PlayerActivity : AppCompatActivity() {
                 val title = intent.getStringExtra("TRACK_TITLE")
                 val artist = intent.getStringExtra("TRACK_ARTIST")
                 val cover = intent.getStringExtra("TRACK_COVER")
+                val trackQuality = intent.getStringExtra("TRACK_QUALITY")
+                
+                maxTrackQuality = trackQuality
                 updateUI(title, artist, cover, isPlaying)
                 
                 val trackId = intent.getLongExtra("TRACK_ID", -1L)
@@ -105,6 +110,12 @@ class PlayerActivity : AppCompatActivity() {
         btnPrev = findViewById(R.id.btn_prev)
         btnNext = findViewById(R.id.btn_next)
         btnLyricsToggle = findViewById(R.id.btn_lyrics_toggle)
+        btnQuality = findViewById(R.id.btn_quality)
+        
+        // Setup initial quality text
+        val prefs = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
+        val currentQuality = prefs.getString("audio_quality", "HIGH") ?: "HIGH"
+        btnQuality.text = currentQuality
         
         recyclerLyrics = findViewById(R.id.recycler_lyrics)
         recyclerLyrics.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
@@ -114,6 +125,10 @@ class PlayerActivity : AppCompatActivity() {
         btnLyricsToggle.setOnClickListener {
             isLyricsVisible = !isLyricsVisible
             recyclerLyrics.visibility = if (isLyricsVisible) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        
+        btnQuality.setOnClickListener {
+            showQualityDialog()
         }
 
         btnPlay.setOnClickListener {
@@ -307,5 +322,39 @@ class PlayerActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showQualityDialog() {
+        var qualities = arrayOf("LOW", "HIGH", "LOSSLESS", "HI_RES")
+        
+        // Filter based on max available quality
+        maxTrackQuality?.let { maxQ ->
+            val maxIndex = qualities.indexOf(maxQ)
+            if (maxIndex != -1) {
+                qualities = qualities.sliceArray(0..maxIndex)
+            }
+        }
+
+        val prefs = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
+        val currentQuality = prefs.getString("audio_quality", "HIGH") ?: "HIGH"
+        val checkedItem = qualities.indexOf(currentQuality).takeIf { it >= 0 } ?: 1
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Select Audio Quality")
+            .setSingleChoiceItems(qualities, checkedItem) { dialog, which ->
+                val selectedQuality = qualities[which]
+                prefs.edit().putString("audio_quality", selectedQuality).apply()
+                btnQuality.text = selectedQuality
+                
+                // Notify service to change quality mid-playback
+                val intent = Intent(this, PlaybackService::class.java).apply {
+                    action = PlaybackService.ACTION_CHANGE_QUALITY
+                }
+                startService(intent)
+                
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

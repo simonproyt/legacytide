@@ -5,14 +5,20 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Playlist stuff and audio playback is finally working 
 - Lyrics are working with timeing data now
 - Lockscreen and notification card controls
+- Able to change the quality of the music now
+- Search 
+- Homescreen and mixes
 ## What is not working?
-- There are no way to change the quality of the music yet :
-- Homescreen
+
+- 
 ## Bugs
 - Lingering track metadata bug : fixed
-- Little bit choppy playback maybe bigger buffer will fix it but idk 
+- Little bit choppy playback maybe bigger buffer will fix it but idk : fixed
+- No lyrics from the music started from search still broken : fixed
+-  Mixes doesnt work : fixed
+
 ## How to try the app out?
-Download the apk from the releases tab and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway
+Download the apk from the releases tab and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway    
 
 
 
