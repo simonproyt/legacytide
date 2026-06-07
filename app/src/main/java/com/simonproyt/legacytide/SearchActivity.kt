@@ -73,24 +73,14 @@ class SearchActivity : AppCompatActivity() {
             // Queue up the single track
             PlaybackQueue.tracks = trackAdapter.getTracks()
             PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
-            
-            // Start playback service
-            val intent = Intent(this, PlaybackService::class.java).apply {
-                action = PlaybackService.ACTION_PLAY
-                putExtra(PlaybackService.EXTRA_TRACK_ID, track.id)
-                putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, accessToken)
-                putExtra(PlaybackService.EXTRA_USER_ID, userId.toLong())
-                putExtra(PlaybackService.EXTRA_COUNTRY_CODE, countryCode)
-            }
-            startService(intent)
 
-            // Open PlayerActivity
-            val playerIntent = Intent(this, PlayerActivity::class.java).apply {
-                putExtra("ACCESS_TOKEN", accessToken)
-                putExtra("USER_ID", userId)
-                putExtra("COUNTRY_CODE", countryCode)
+            val playIntent = Intent(this, PlaybackService::class.java).apply {
+                action = PlaybackService.ACTION_PLAY
+                putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken)
+                putExtra(PlaybackService.EXTRA_USER_ID, session.userId)
+                putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode)
             }
-            startActivity(playerIntent)
+            startService(playIntent)
         }
 
         recyclerSearchResults.layoutManager = LinearLayoutManager(this)

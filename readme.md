@@ -12,7 +12,7 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Artist pages
 - Smol cache of 10mb to make home page loadup faster
 ## What is not working?
-
+- Usermade playlists
 
 ## Bugs
 - Lingering track metadata bug : fixed

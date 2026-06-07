@@ -83,31 +83,23 @@ class ArtistActivity : AppCompatActivity() {
                     
                     val uuid = artist.picture
                     if (uuid != null && uuid.isNotBlank()) {
-                        val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/1280x1280.jpg"
+                        val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/750x750.jpg"
                         Picasso.with(this@ArtistActivity).load(imageUrl).into(ivPicture)
                     }
                     
                     // Setup Top Tracks
                     recyclerTopTracks.layoutManager = LinearLayoutManager(this@ArtistActivity)
                     val tracksAdapter = TrackAdapter { track ->
-                        // Pass session credentials to PlayerActivity
-                        val playerIntent = Intent(this@ArtistActivity, PlayerActivity::class.java).apply {
-                            putExtra("TRACK_ID", track.id)
-                            putExtra("TRACK_TITLE", track.title)
-                            putExtra("TRACK_ARTIST", track.artist?.name ?: "Unknown Artist")
-                            putExtra("TRACK_ALBUM", track.album?.title ?: "Unknown Album")
-                            
-                            val coverUuid = track.album?.cover
-                            if (coverUuid != null && coverUuid.isNotBlank()) {
-                                val coverUrl = if (coverUuid.startsWith("http")) coverUuid else "https://resources.tidal.com/images/${coverUuid.replace("-", "/")}/1280x1280.jpg"
-                                putExtra("TRACK_IMAGE", coverUrl)
-                            }
-                            
-                            putExtra("ACCESS_TOKEN", session.accessToken ?: "")
-                            putExtra("USER_ID", session.userId ?: -1L)
-                            putExtra("COUNTRY_CODE", session.countryCode ?: "US")
+                        PlaybackQueue.tracks = topTracks
+                        PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
+                        
+                        val playIntent = Intent(this@ArtistActivity, PlaybackService::class.java).apply {
+                            action = PlaybackService.ACTION_PLAY
+                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken ?: "")
+                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId ?: -1L)
+                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode ?: "US")
                         }
-                        startActivity(playerIntent)
+                        startService(playIntent)
                     }
                     tracksAdapter.submitList(topTracks)
                     recyclerTopTracks.adapter = tracksAdapter

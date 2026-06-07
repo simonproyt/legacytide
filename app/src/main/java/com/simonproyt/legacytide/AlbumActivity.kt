@@ -93,24 +93,27 @@ class AlbumActivity : AppCompatActivity() {
                     
                     recyclerView.layoutManager = LinearLayoutManager(this@AlbumActivity)
                     val adapter = TrackAdapter { track ->
-                        // Pass session credentials to PlayerActivity
-                        val playerIntent = android.content.Intent(this@AlbumActivity, PlayerActivity::class.java).apply {
-                            putExtra("TRACK_ID", track.id)
-                            putExtra("TRACK_TITLE", track.title)
-                            putExtra("TRACK_ARTIST", track.artist?.name ?: "Unknown Artist")
-                            putExtra("TRACK_ALBUM", track.album?.title ?: "Unknown Album")
-                            
-                            val coverUuid = track.album?.cover
-                            if (coverUuid != null && coverUuid.isNotBlank()) {
-                                val coverUrl = if (coverUuid.startsWith("http")) coverUuid else "https://resources.tidal.com/images/${coverUuid.replace("-", "/")}/1280x1280.jpg"
-                                putExtra("TRACK_IMAGE", coverUrl)
-                            }
-                            
-                            putExtra("ACCESS_TOKEN", session.accessToken ?: "")
-                            putExtra("USER_ID", session.userId ?: -1L)
-                            putExtra("COUNTRY_CODE", session.countryCode ?: "US")
+                        // Add album details to tracks since they might be missing
+                        val trackWithDetails = track.copy(
+                            album = track.album ?: album,
+                            artist = track.artist ?: track.artists?.firstOrNull()
+                        )
+                        
+                        PlaybackQueue.tracks = tracks.map { 
+                            it.copy(
+                                album = it.album ?: album,
+                                artist = it.artist ?: it.artists?.firstOrNull()
+                            )
                         }
-                        startActivity(playerIntent)
+                        PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
+                        
+                        val playIntent = android.content.Intent(this@AlbumActivity, PlaybackService::class.java).apply {
+                            action = PlaybackService.ACTION_PLAY
+                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken ?: "")
+                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId ?: -1L)
+                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode ?: "US")
+                        }
+                        startService(playIntent)
                     }
                     adapter.submitList(tracks)
                     recyclerView.adapter = adapter

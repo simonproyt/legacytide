@@ -51,22 +51,6 @@
             android:orientation="vertical"
             android:paddingBottom="16dp">
 
-            <!-- Top Tracks Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Top Tracks"
-                android:textColor="#FFFFFF"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:padding="16dp" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_artist_top_tracks"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false" />
-
             <ProgressBar
                 android:id="@+id/progress_artist"
                 android:layout_width="wrap_content"
@@ -92,6 +76,22 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:clipToPadding="false" />
+
+            <!-- Top Tracks Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Top Tracks"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:padding="16dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_artist_top_tracks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
