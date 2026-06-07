@@ -13,3 +13,7 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Little bit choppy playback maybe bigger buffer will fix it but idk 
 ## How to try the app out?
 Download the apk from the releases tab and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway
+
+
+
+## Also huge thanks for the people who wrote the python tidal api client that i used to understand the api
