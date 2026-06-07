@@ -60,10 +60,10 @@ class PlaybackService : Service() {
         super.onCreate()
         val loadControl = com.google.android.exoplayer2.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                32000, // min buffer 32s
-                64000, // max buffer 64s
-                2500, // min buffer for playback 2.5s
-                5000 // min buffer for playback after rebuffer 5s
+                60000, // min buffer 60s
+                120000, // max buffer 120s
+                5000, // min buffer for playback 5s
+                10000 // min buffer for playback after rebuffer 10s
             ).build()
         player = ExoPlayer.Builder(this)
             .setLoadControl(loadControl)
