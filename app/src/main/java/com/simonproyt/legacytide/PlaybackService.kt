@@ -16,11 +16,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.app.NotificationCompat
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.os.Build
 
 class PlaybackService : Service() {
     private var player: ExoPlayer? = null
     private lateinit var session: Session
     private lateinit var tidalService: TidalService
+    private var mediaSession: MediaSessionCompat? = null
 
     inner class LocalBinder : android.os.Binder() {
         fun getService(): PlaybackService = this@PlaybackService
@@ -30,6 +39,8 @@ class PlaybackService : Service() {
     fun getPlayer(): ExoPlayer? = player
     
     companion object {
+        const val CHANNEL_ID = "LegacyTidePlayback"
+        const val NOTIFICATION_ID = 1
         const val ACTION_PLAY = "com.simonproyt.legacytide.PLAY"
         const val ACTION_TOGGLE_PLAYBACK = "com.simonproyt.legacytide.TOGGLE_PLAYBACK"
         const val ACTION_NEXT = "com.simonproyt.legacytide.NEXT"
@@ -69,6 +80,30 @@ class PlaybackService : Service() {
                 }
             }
         })
+        val mbrComponent = android.content.ComponentName(this, androidx.media.session.MediaButtonReceiver::class.java)
+        val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        mbrIntent.component = mbrComponent
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE
+        } else {
+            0
+        }
+        val mbrPendingIntent = PendingIntent.getBroadcast(this, 0, mbrIntent, flags)
+        
+        mediaSession = MediaSessionCompat(this, "LegacyTideMediaSession", mbrComponent, mbrPendingIntent).apply {
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onPlay() { player?.playWhenReady = true }
+                override fun onPause() { player?.playWhenReady = false }
+                override fun onSkipToNext() { playNextTrack() }
+                override fun onSkipToPrevious() { playPreviousTrack() }
+            })
+            isActive = true
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "Media Playback", NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+        }
     }
 
     private fun broadcastState() {
@@ -79,11 +114,68 @@ class PlaybackService : Service() {
         intent.putExtra("TRACK_COVER", currentCover)
         intent.putExtra("IS_PLAYING", isPlaying)
         sendBroadcast(intent)
+
+        updateNotification(null)
+        if (currentCover != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val imageUrl = "https://resources.tidal.com/images/${currentCover?.replace('-', '/')}/320x320.jpg"
+                    val stream = java.net.URL(imageUrl).openStream()
+                    val bitmap = android.graphics.BitmapFactory.decodeStream(stream)
+                    withContext(Dispatchers.Main) {
+                        updateNotification(bitmap)
+                    }
+                } catch (e: Exception) {}
+            }
+        }
+    }
+
+    private fun updateNotification(bitmap: android.graphics.Bitmap? = null) {
+        val playPauseAction = if (isPlaying) {
+            NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", getPendingIntent(ACTION_TOGGLE_PLAYBACK))
+        } else {
+            NotificationCompat.Action(android.R.drawable.ic_media_play, "Play", getPendingIntent(ACTION_TOGGLE_PLAYBACK))
+        }
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(currentTitle ?: "Unknown Track")
+            .setContentText(currentArtist ?: "Unknown Artist")
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setLargeIcon(bitmap)
+            .addAction(android.R.drawable.ic_media_previous, "Previous", getPendingIntent(ACTION_PREVIOUS))
+            .addAction(playPauseAction)
+            .addAction(android.R.drawable.ic_media_next, "Next", getPendingIntent(ACTION_NEXT))
+            .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
+                .setShowActionsInCompactView(0, 1, 2)
+                .setMediaSession(mediaSession?.sessionToken))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOnlyAlertOnce(true)
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+        
+        val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+        mediaSession?.setPlaybackState(PlaybackStateCompat.Builder()
+            .setActions(PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+            .setState(state, player?.currentPosition ?: 0L, 1.0f)
+            .build())
+    }
+
+    private fun getPendingIntent(action: String): PendingIntent {
+        val intent = Intent(this, PlaybackService::class.java).apply { this.action = action }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        return PendingIntent.getService(this, action.hashCode(), intent, flags)
     }
 
     override fun onBind(intent: Intent?): IBinder? = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        androidx.media.session.MediaButtonReceiver.handleIntent(mediaSession, intent)
+        
         if (intent?.action == ACTION_PLAY) {
             val accessToken = intent.getStringExtra(EXTRA_ACCESS_TOKEN)
             val userId = intent.getLongExtra(EXTRA_USER_ID, -1)
