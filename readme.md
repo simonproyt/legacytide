@@ -12,4 +12,4 @@ Bugs
 - Lingering track metadata bug : fixed
 - Little bit choppy playback maybe bigger buffer will fix it but idk 
 How to try the app out?
-Download the apk and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway
+Download the apk from the relases tab  and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway
