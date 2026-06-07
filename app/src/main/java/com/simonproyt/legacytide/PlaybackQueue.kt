@@ -3,7 +3,7 @@ package com.simonproyt.legacytide
 import com.simonproyt.legacytide.api.models.Track
 
 object PlaybackQueue {
-    var tracks: List<Track> = emptyList()
+    var tracks: ArrayList<Track> = arrayListOf()
     var currentIndex: Int = -1
 
     fun getCurrentTrack(): Track? {

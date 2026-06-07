@@ -57,7 +57,7 @@ class TracksActivity : AppCompatActivity() {
         tidalService = TidalService(session)
 
         trackAdapter = TrackAdapter { track ->
-            PlaybackQueue.tracks = trackAdapter.getTracks()
+            PlaybackQueue.tracks = ArrayList(trackAdapter.getTracks())
             PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
             
             val intent = Intent(this, PlaybackService::class.java).apply {
@@ -73,10 +73,15 @@ class TracksActivity : AppCompatActivity() {
         
         btnNavHome = findViewById(R.id.btn_nav_home)
         btnNavPlaylists = findViewById(R.id.btn_nav_playlists)
+        val btnNavPlaylists = findViewById<View>(R.id.btn_nav_playlists)
+        btnNavPlaylists.setOnClickListener {
+            val intent = Intent(this, CollectionActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
         btnNavSearch = findViewById(R.id.btn_nav_search)
 
         btnNavHome.setOnClickListener { finish() }
-        btnNavPlaylists.setOnClickListener { finish() }
         btnNavSearch.setOnClickListener {
             val intent = Intent(this, SearchActivity::class.java).apply {
                 putExtra("ACCESS_TOKEN", session.accessToken)

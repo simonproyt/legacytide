@@ -90,23 +90,28 @@ class ArtistActivity : AppCompatActivity() {
                     // Setup Top Tracks
                     recyclerTopTracks.layoutManager = LinearLayoutManager(this@ArtistActivity)
                     val tracksAdapter = TrackAdapter { track ->
-                        PlaybackQueue.tracks = topTracks
+                        PlaybackQueue.tracks = ArrayList(topTracks)
                         PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
                         
                         val playIntent = Intent(this@ArtistActivity, PlaybackService::class.java).apply {
                             action = PlaybackService.ACTION_PLAY
-                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken ?: "")
-                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId ?: -1L)
-                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode ?: "US")
+                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken)
+                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId)
+                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode)
                         }
                         startService(playIntent)
+                        
+                        val playerIntent = Intent(this@ArtistActivity, PlayerActivity::class.java)
+                        startActivity(playerIntent)
                     }
                     tracksAdapter.submitList(topTracks)
                     recyclerTopTracks.adapter = tracksAdapter
                     
                     // Setup Albums
                     recyclerAlbums.layoutManager = LinearLayoutManager(this@ArtistActivity, LinearLayoutManager.HORIZONTAL, false)
-                    recyclerAlbums.adapter = AlbumAdapter(albums)
+                    val albumAdapter = AlbumAdapter()
+                    albumAdapter.submitList(albums)
+                    recyclerAlbums.adapter = albumAdapter
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

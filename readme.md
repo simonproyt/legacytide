@@ -11,14 +11,17 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Albums
 - Artist pages
 - Smol cache of 10mb to make home page loadup faster
+- Up next queue
+- 
 ## What is not working?
-- Usermade playlists
+
 
 ## Bugs
 - Lingering track metadata bug : fixed
 - Little bit choppy playback maybe bigger buffer will fix it but idk : fixed
 - No lyrics from the music started from search still broken : fixed
 -  Mixes doesnt work : fixed
+-  Not loading artist page img properly: fixed
 
 ## How to try the app out?
 Download the apk from the releases tab and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway    
@@ -28,3 +31,4 @@ Download the apk from the releases tab and install it on your device i have no i
 ## Also huge thanks for the people who wrote the python tidal api client that i used to understand the api
 
 ## TODO
+      

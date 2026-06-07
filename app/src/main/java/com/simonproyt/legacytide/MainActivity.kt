@@ -73,7 +73,11 @@ class MainActivity : AppCompatActivity() {
         progressPlaylists = findViewById(R.id.progress_playlists)
         tvHeader = findViewById(R.id.tv_header)
         btnNavHome = findViewById(R.id.btn_nav_home)
-        btnNavPlaylists = findViewById(R.id.btn_nav_playlists)
+        val btnNavPlaylists = findViewById<View>(R.id.btn_nav_playlists)
+        btnNavPlaylists.setOnClickListener {
+            val intent = Intent(this, CollectionActivity::class.java)
+            startActivity(intent)
+        }
         btnNavSearch = findViewById(R.id.btn_nav_search)
 
         playlistAdapter = PlaylistAdapter { playlist ->
@@ -95,10 +99,6 @@ class MainActivity : AppCompatActivity() {
             loadMixes()
         }
 
-        btnNavPlaylists.setOnClickListener {
-            tvHeader.text = "My Playlists"
-            loadPlaylists()
-        }
 
         btnNavSearch.setOnClickListener {
             val intent = Intent(this, SearchActivity::class.java).apply {
@@ -126,25 +126,6 @@ class MainActivity : AppCompatActivity() {
         nowPlayingHelper.onPause()
     }
 
-    private fun loadPlaylists() {
-        progressPlaylists.visibility = View.VISIBLE
-        recyclerPlaylists.visibility = View.GONE
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val playlists = tidalService.getUserPlaylists()
-                withContext(Dispatchers.Main) {
-                    playlistAdapter.submitList(playlists)
-                    progressPlaylists.visibility = View.GONE
-                    recyclerPlaylists.visibility = View.VISIBLE
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    progressPlaylists.visibility = View.GONE
-                    android.widget.Toast.makeText(this@MainActivity, "Error loading playlists: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
 
     private fun loadMixes() {
         progressPlaylists.visibility = View.VISIBLE
@@ -166,71 +147,5 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    inner class PlaylistAdapter(private val onClick: (Playlist) -> Unit) : RecyclerView.Adapter<PlaylistAdapter.ViewHolder>() {
-        private var items: List<Playlist> = emptyList()
 
-        fun submitList(newItems: List<Playlist>) {
-            items = newItems
-            notifyDataSetChanged()
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_playlist, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
-            holder.bind(item)
-        }
-
-        override fun getItemCount() = items.size
-
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val titleView: TextView = itemView.findViewById(R.id.tv_playlist_title)
-            private val descView: TextView = itemView.findViewById(R.id.tv_playlist_desc)
-            private val artView: ImageView = itemView.findViewById(R.id.img_playlist_art)
-
-            init {
-                itemView.setOnClickListener {
-                    onClick(items[adapterPosition])
-                }
-            }
-
-            fun bind(playlist: Playlist) {
-                if (playlist.isHeader) {
-                    titleView.text = playlist.title
-                    titleView.textSize = 20f
-                    titleView.setTextColor(android.graphics.Color.parseColor("#55AADD"))
-                    descView.visibility = View.GONE
-                    artView.visibility = View.GONE
-                    itemView.isClickable = false
-                    return
-                }
-                
-                titleView.text = playlist.title
-                titleView.textSize = 16f
-                titleView.setTextColor(android.graphics.Color.WHITE)
-                descView.visibility = View.VISIBLE
-                artView.visibility = View.VISIBLE
-                itemView.isClickable = true
-                
-                if (playlist.numberOfTracks > 0) {
-                    descView.text = "${playlist.numberOfTracks} tracks"
-                } else if (!playlist.description.isNullOrEmpty()) {
-                    descView.text = playlist.description
-                } else {
-                    descView.text = ""
-                }
-                
-                val uuid = playlist.squareImage ?: playlist.image
-                if (uuid != null && uuid.isNotBlank()) {
-                    val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/320x320.jpg"
-                    Picasso.with(itemView.context).load(imageUrl).into(artView)
-                } else {
-                    artView.setImageDrawable(null)
-                }
-            }
-        }
-    }
 }

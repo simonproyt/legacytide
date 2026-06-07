@@ -67,11 +67,15 @@ class SearchActivity : AppCompatActivity() {
         btnNavSearch = findViewById(R.id.btn_nav_search)
 
         btnNavHome.setOnClickListener { finish() } // Goes back to MainActivity
-        btnNavPlaylists.setOnClickListener { finish() } // MainActivity has Playlists too
+        btnNavPlaylists.setOnClickListener {
+            val intent = Intent(this, CollectionActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
 
         trackAdapter = TrackAdapter { track ->
             // Queue up the single track
-            PlaybackQueue.tracks = trackAdapter.getTracks()
+            PlaybackQueue.tracks = ArrayList(trackAdapter.getTracks())
             PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
 
             val playIntent = Intent(this, PlaybackService::class.java).apply {

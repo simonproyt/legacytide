@@ -99,21 +99,24 @@ class AlbumActivity : AppCompatActivity() {
                             artist = track.artist ?: track.artists?.firstOrNull()
                         )
                         
-                        PlaybackQueue.tracks = tracks.map { 
+                        PlaybackQueue.tracks = ArrayList(tracks.map { 
                             it.copy(
                                 album = it.album ?: album,
                                 artist = it.artist ?: it.artists?.firstOrNull()
                             )
-                        }
+                        })
                         PlaybackQueue.currentIndex = PlaybackQueue.tracks.indexOfFirst { it.id == track.id }
                         
                         val playIntent = android.content.Intent(this@AlbumActivity, PlaybackService::class.java).apply {
                             action = PlaybackService.ACTION_PLAY
-                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken ?: "")
-                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId ?: -1L)
-                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode ?: "US")
+                            putExtra(PlaybackService.EXTRA_ACCESS_TOKEN, session.accessToken)
+                            putExtra(PlaybackService.EXTRA_USER_ID, session.userId)
+                            putExtra(PlaybackService.EXTRA_COUNTRY_CODE, session.countryCode)
                         }
                         startService(playIntent)
+                        
+                        val playerIntent = android.content.Intent(this@AlbumActivity, PlayerActivity::class.java)
+                        startActivity(playerIntent)
                     }
                     adapter.submitList(tracks)
                     recyclerView.adapter = adapter

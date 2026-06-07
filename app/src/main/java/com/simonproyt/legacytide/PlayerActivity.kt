@@ -111,6 +111,12 @@ class PlayerActivity : AppCompatActivity() {
         btnPlay = findViewById(R.id.btn_play)
         btnPrev = findViewById(R.id.btn_prev)
         btnNext = findViewById(R.id.btn_next)
+        val btnQueue = findViewById<ImageView>(R.id.btn_queue)
+
+        btnQueue.setOnClickListener {
+            val intent = android.content.Intent(this, QueueActivity::class.java)
+            startActivity(intent)
+        }
         btnLyricsToggle = findViewById(R.id.btn_lyrics_toggle)
         btnQuality = findViewById(R.id.btn_quality)
         

@@ -44,6 +44,13 @@ class TrackAdapter(private val onClick: (Track) -> Unit) : RecyclerView.Adapter<
         fun bind(track: Track) {
             titleView.text = track.title
             
+            val currentTrack = PlaybackQueue.getCurrentTrack()
+            if (currentTrack != null && currentTrack.id == track.id) {
+                titleView.setTextColor(android.graphics.Color.parseColor("#55AADD")) // Tidal Blue
+            } else {
+                titleView.setTextColor(android.graphics.Color.WHITE)
+            }
+            
             val artistName = track.artist?.name ?: track.artists?.firstOrNull()?.name ?: "Unknown Artist"
             artistView.text = artistName
             

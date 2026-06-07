@@ -44,6 +44,50 @@ class TidalService(private val session: Session) {
             return result.items
         }
     }
+
+    // Tidal wraps favorite items in an object: { "item": { ... } }
+    private data class FavoriteTrackItem(val item: Track, val created: String)
+    private data class FavoriteAlbumItem(val item: Album, val created: String)
+
+    fun getFavoriteTracks(): List<Track> {
+        val userId = session.userId ?: throw IllegalStateException("Not logged in")
+        val url = "${session.config.apiV1Location}users/$userId/favorites/tracks?countryCode=${session.countryCode ?: "US"}&limit=100"
+
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+            
+            val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+            val type = object : TypeToken<TidalListResponse<FavoriteTrackItem>>() {}.type
+            val result: TidalListResponse<FavoriteTrackItem> = gson.fromJson(responseBody, type)
+            return result.items.map { it.item }
+        }
+    }
+
+    fun getFavoriteAlbums(): List<Album> {
+        val userId = session.userId ?: throw IllegalStateException("Not logged in")
+        val url = "${session.config.apiV1Location}users/$userId/favorites/albums?countryCode=${session.countryCode ?: "US"}&limit=100"
+
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+            
+            val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+            val type = object : TypeToken<TidalListResponse<FavoriteAlbumItem>>() {}.type
+            val result: TidalListResponse<FavoriteAlbumItem> = gson.fromJson(responseBody, type)
+            return result.items.map { it.item }
+        }
+    }
     
     fun getMixes(): List<Playlist> {
         val url = "${session.config.apiV1Location}pages/for_you?countryCode=${session.countryCode ?: "US"}&deviceType=PHONE"

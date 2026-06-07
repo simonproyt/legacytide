@@ -10,7 +10,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.simonproyt.legacytide.api.models.Album
 import com.squareup.picasso.Picasso
 
-class AlbumAdapter(private val albums: List<Album>) : RecyclerView.Adapter<AlbumAdapter.ViewHolder>() {
+class AlbumAdapter(private val onClick: ((Album) -> Unit)? = null) : RecyclerView.Adapter<AlbumAdapter.ViewHolder>() {
+
+    private var albums: List<Album> = emptyList()
+
+    fun submitList(newAlbums: List<Album>) {
+        albums = newAlbums
+        notifyDataSetChanged()
+    }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivCover: ImageView = view.findViewById(R.id.iv_album_cover)
@@ -35,12 +42,16 @@ class AlbumAdapter(private val albums: List<Album>) : RecyclerView.Adapter<Album
         }
 
         holder.itemView.setOnClickListener {
-            val context = holder.itemView.context
-            val intent = Intent(context, AlbumActivity::class.java).apply {
-                putExtra("ALBUM_ID", album.id)
-                putExtra("ALBUM_TITLE", album.title)
+            if (onClick != null) {
+                onClick.invoke(album)
+            } else {
+                val context = holder.itemView.context
+                val intent = Intent(context, AlbumActivity::class.java).apply {
+                    putExtra("ALBUM_ID", album.id)
+                    putExtra("ALBUM_TITLE", album.title)
+                }
+                context.startActivity(intent)
             }
-            context.startActivity(intent)
         }
     }
 
