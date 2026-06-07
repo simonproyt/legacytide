@@ -52,6 +52,12 @@ class MainActivity : AppCompatActivity() {
             this.userId = userId
             this.countryCode = countryCode
         }
+
+        // Setup 10MB API cache
+        val cacheSize = 10 * 1024 * 1024L
+        val cache = okhttp3.Cache(java.io.File(cacheDir, "http_cache"), cacheSize)
+        session.client = session.client.newBuilder().cache(cache).build()
+
         tidalService = TidalService(session)
 
         try {

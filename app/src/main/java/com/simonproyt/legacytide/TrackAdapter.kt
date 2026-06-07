@@ -43,7 +43,21 @@ class TrackAdapter(private val onClick: (Track) -> Unit) : RecyclerView.Adapter<
 
         fun bind(track: Track) {
             titleView.text = track.title
-            artistView.text = track.artist?.name ?: track.artists?.joinToString(", ") { it.name ?: "" } ?: "Unknown Artist"
+            
+            val artistName = track.artist?.name ?: track.artists?.firstOrNull()?.name ?: "Unknown Artist"
+            artistView.text = artistName
+            
+            artistView.setOnClickListener {
+                val artistId = track.artist?.id ?: track.artists?.firstOrNull()?.id
+                if (artistId != null) {
+                    val context = itemView.context
+                    val intent = android.content.Intent(context, ArtistActivity::class.java).apply {
+                        putExtra("ARTIST_ID", artistId)
+                        putExtra("ARTIST_NAME", artistName)
+                    }
+                    context.startActivity(intent)
+                }
+            }
 
             val uuid = track.album?.cover
             if (uuid != null && uuid.isNotBlank()) {

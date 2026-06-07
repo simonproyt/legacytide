@@ -50,11 +50,16 @@ data class Track(
 )
 
 data class Artist(
-    val name: String?
+    val id: Long,
+    val name: String?,
+    val picture: String?
 )
 
 data class Album(
-    val cover: String? // uuid of cover
+    val id: Long,
+    val title: String?,
+    val cover: String?, // uuid of cover
+    val releaseDate: String?
 )
 
 data class PlaybackInfo(

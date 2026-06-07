@@ -26,6 +26,14 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".AlbumActivity"
+            android:exported="false"
+            android:label="Album" />
+        <activity
+            android:name=".ArtistActivity"
+            android:exported="false"
+            android:label="Artist" />
+        <activity
             android:name=".MainActivity"
             android:exported="true" />
         <activity

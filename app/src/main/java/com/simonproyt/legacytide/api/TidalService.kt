@@ -2,6 +2,9 @@ package com.simonproyt.legacytide.api
 
 import com.simonproyt.legacytide.api.models.Playlist
 import com.simonproyt.legacytide.api.models.Track
+import com.simonproyt.legacytide.api.models.Album
+import com.simonproyt.legacytide.api.models.Artist
+
 import com.simonproyt.legacytide.api.models.PlaybackInfo
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -200,6 +203,97 @@ class TidalService(private val session: Session) {
             if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
             val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
             return gson.fromJson(responseBody, Track::class.java)
+        }
+    }
+
+    suspend fun getArtist(artistId: Long): Artist {
+        val url = "${session.config.apiV1Location}artists/$artistId?countryCode=${session.countryCode ?: "US"}"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+            
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+                val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+                gson.fromJson(responseBody, Artist::class.java)
+            }
+        }
+    }
+
+    suspend fun getArtistTopTracks(artistId: Long): List<Track> {
+        val url = "${session.config.apiV1Location}artists/$artistId/toptracks?countryCode=${session.countryCode ?: "US"}&limit=50"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+            
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+                val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+                val type = object : TypeToken<TidalListResponse<Track>>() {}.type
+                val result: TidalListResponse<Track> = gson.fromJson(responseBody, type)
+                result.items
+            }
+        }
+    }
+
+    suspend fun getArtistAlbums(artistId: Long): List<Album> {
+        val url = "${session.config.apiV1Location}artists/$artistId/albums?countryCode=${session.countryCode ?: "US"}&limit=50"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+            
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+                val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+                val type = object : TypeToken<TidalListResponse<Album>>() {}.type
+                val result: TidalListResponse<Album> = gson.fromJson(responseBody, type)
+                result.items
+            }
+        }
+    }
+
+    suspend fun getAlbum(albumId: Long): Album {
+        val url = "${session.config.apiV1Location}albums/$albumId?countryCode=${session.countryCode ?: "US"}"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+            
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+                val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+                gson.fromJson(responseBody, Album::class.java)
+            }
+        }
+    }
+
+    suspend fun getAlbumTracks(albumId: Long): List<Track> {
+        val url = "${session.config.apiV1Location}albums/$albumId/tracks?countryCode=${session.countryCode ?: "US"}&limit=100"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer ${session.accessToken}")
+            .get()
+            .build()
+            
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code ${response.code()}")
+                val responseBody = response.body()?.string() ?: throw IOException("Empty response body")
+                val type = object : TypeToken<TidalListResponse<Track>>() {}.type
+                val result: TidalListResponse<Track> = gson.fromJson(responseBody, type)
+                result.items
+            }
         }
     }
 

@@ -31,6 +31,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private lateinit var tvTitle: TextView
     private lateinit var tvArtist: TextView
+    private lateinit var tvAlbum: TextView
     private lateinit var imgArt: ImageView
     private lateinit var tvPosition: TextView
     private lateinit var tvDuration: TextView
@@ -102,6 +103,7 @@ class PlayerActivity : AppCompatActivity() {
 
         tvTitle = findViewById(R.id.tv_player_title)
         tvArtist = findViewById(R.id.tv_player_artist)
+        tvAlbum = findViewById(R.id.tv_player_album)
         imgArt = findViewById(R.id.img_player_art)
         tvPosition = findViewById(R.id.tv_position)
         tvDuration = findViewById(R.id.tv_duration)
@@ -190,6 +192,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun updateUI(title: String?, artist: String?, cover: String?, isPlaying: Boolean) {
         tvTitle.text = title ?: "Unknown Track"
         tvArtist.text = artist ?: "Unknown Artist"
+        // Album will be updated after track fetch
         
         btnPlay.setImageResource(if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
         
@@ -307,6 +310,38 @@ class PlayerActivity : AppCompatActivity() {
         recyclerLyrics.visibility = if (isLyricsVisible) android.view.View.VISIBLE else android.view.View.GONE
 
         CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val track = tidalService.getTrack(trackId)
+                withContext(Dispatchers.Main) {
+                    val albumTitle = track.album?.title ?: "Unknown Album"
+                    tvAlbum.text = albumTitle
+                    
+                    tvArtist.setOnClickListener {
+                        val artistId = track.artist?.id ?: track.artists?.firstOrNull()?.id
+                        if (artistId != null) {
+                            val intent = android.content.Intent(this@PlayerActivity, ArtistActivity::class.java).apply {
+                                putExtra("ARTIST_ID", artistId)
+                                putExtra("ARTIST_NAME", track.artist?.name ?: "Unknown Artist")
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                    
+                    tvAlbum.setOnClickListener {
+                        val albumId = track.album?.id
+                        if (albumId != null) {
+                            val intent = android.content.Intent(this@PlayerActivity, AlbumActivity::class.java).apply {
+                                putExtra("ALBUM_ID", albumId)
+                                putExtra("ALBUM_TITLE", albumTitle)
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             val rawLyrics = tidalService.getLyrics(trackId)
             withContext(Dispatchers.Main) {
                 if (rawLyrics == null || rawLyrics.startsWith("Error ") || rawLyrics.startsWith("Exception: ") || rawLyrics.startsWith("Parse error: ")) {

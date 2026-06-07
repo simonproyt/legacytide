@@ -8,9 +8,12 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Able to change the quality of the music now
 - Search 
 - Homescreen and mixes
+- Albums
+- Artist pages
+- Smol cache of 10mb to make home page loadup faster
 ## What is not working?
 
-- 
+
 ## Bugs
 - Lingering track metadata bug : fixed
 - Little bit choppy playback maybe bigger buffer will fix it but idk : fixed
@@ -23,3 +26,5 @@ Download the apk from the releases tab and install it on your device i have no i
 
 
 ## Also huge thanks for the people who wrote the python tidal api client that i used to understand the api
+
+## TODO

@@ -11,7 +11,7 @@ import java.io.IOException
 import java.security.Security
 
 class Session(val config: Config = Config()) {
-    val client: OkHttpClient
+    var client: OkHttpClient
 
     init {
         // Install Conscrypt to provide modern TLS (1.2/1.3) and ciphers (GCM) on API 18
@@ -19,7 +19,7 @@ class Session(val config: Config = Config()) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1)
         }
         
-        client = OkHttpClient()
+        client = OkHttpClient.Builder().build()
     }
 
     private val gson = Gson()
