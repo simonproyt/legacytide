@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import com.squareup.picasso.Picasso
+import java.io.File
 
 class NowPlayingHelper(private val activity: Activity, private val session: com.simonproyt.legacytide.api.Session) {
 
@@ -72,8 +73,15 @@ class NowPlayingHelper(private val activity: Activity, private val session: com.
         
         val artView = activity.findViewById<ImageView>(R.id.img_now_playing_art)
         if (cover != null && cover.isNotEmpty()) {
-            val imageUrl = "https://resources.tidal.com/images/${cover.replace('-', '/')}/320x320.jpg"
-            Picasso.with(activity).load(imageUrl).into(artView)
+            val albumId = PlaybackQueue.getCurrentTrack()?.album?.id
+            val localFile = File(activity.getExternalFilesDir(null), "legacytide_downloads/${albumId}_320.jpg")
+            
+            if (localFile.exists()) {
+                Picasso.with(activity).load(localFile).into(artView)
+            } else {
+                val imageUrl = "https://resources.tidal.com/images/${cover.replace('-', '/')}/320x320.jpg"
+                Picasso.with(activity).load(imageUrl).into(artView)
+            }
         } else {
             artView.setImageDrawable(null)
         }

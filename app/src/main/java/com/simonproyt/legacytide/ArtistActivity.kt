@@ -45,7 +45,7 @@ class ArtistActivity : AppCompatActivity() {
         }
 
         val config = Config()
-        session = Session(config).apply {
+        session = Session(this, config).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode

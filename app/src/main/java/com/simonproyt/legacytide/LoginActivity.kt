@@ -24,11 +24,15 @@ class LoginActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
         val savedToken = prefs.getString("ACCESS_TOKEN", null)
+        val savedRefreshToken = prefs.getString("REFRESH_TOKEN", null)
         val savedUserId = prefs.getLong("USER_ID", -1L)
         val savedCountry = prefs.getString("COUNTRY_CODE", null)
         
         if (savedToken != null && savedUserId != -1L) {
-            val intent = Intent(this, MainActivity::class.java).apply {
+            val isOfflinePref = prefs.getBoolean("offline_mode", false)
+            
+            val targetClass = if (isOfflinePref) DownloadsActivity::class.java else MainActivity::class.java
+            val intent = Intent(this, targetClass).apply {
                 putExtra("ACCESS_TOKEN", savedToken)
                 putExtra("USER_ID", savedUserId)
                 putExtra("COUNTRY_CODE", savedCountry)
@@ -58,7 +62,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(layout)
 
         try {
-            session = Session()
+            session = Session(this)
         } catch (e: Throwable) {
             statusText.text = "Initialization Error:\n${e.javaClass.name}: ${e.message}"
             return
@@ -83,6 +87,7 @@ class LoginActivity : AppCompatActivity() {
                         val prefs = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
                         prefs.edit()
                             .putString("ACCESS_TOKEN", session!!.accessToken)
+                            .putString("REFRESH_TOKEN", session!!.refreshToken)
                             .putLong("USER_ID", session!!.userId ?: -1L)
                             .putString("COUNTRY_CODE", session!!.countryCode)
                             .apply()

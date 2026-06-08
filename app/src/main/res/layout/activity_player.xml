@@ -12,6 +12,16 @@
         android:layout_height="wrap_content">
         
         <ImageView
+            android:id="@+id/btn_favorite"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:src="@android:drawable/btn_star_big_off"
+            android:background="?android:attr/selectableItemBackground"
+            android:layout_alignParentStart="true"
+            android:contentDescription="Favorite" />
+
+        <ImageView
             android:id="@+id/btn_queue"
             android:layout_width="48dp"
             android:layout_height="48dp"

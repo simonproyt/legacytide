@@ -42,14 +42,30 @@ class TracksActivity : AppCompatActivity() {
         playlistId = intent.getStringExtra("PLAYLIST_ID") ?: ""
         val playlistTitle = intent.getStringExtra("PLAYLIST_TITLE")
 
-        title = playlistTitle ?: "Tracks"
+        val tvTitle = findViewById<TextView>(R.id.tv_playlist_title)
+        tvTitle.text = playlistTitle ?: "Tracks"
+
+        findViewById<View>(R.id.btn_back_tracks).setOnClickListener {
+            finish()
+        }
+        
+        findViewById<View>(R.id.btn_download_playlist).setOnClickListener {
+            android.widget.Toast.makeText(this, "Preparing playlist download...", android.widget.Toast.LENGTH_SHORT).show()
+            val sharedPrefs = getSharedPreferences("LegacyTidePrefs", MODE_PRIVATE)
+            val session = com.simonproyt.legacytide.api.Session(this).apply {
+                this.accessToken = sharedPrefs.getString("ACCESS_TOKEN", null)
+                this.userId = sharedPrefs.getLong("USER_ID", -1)
+                this.countryCode = sharedPrefs.getString("COUNTRY_CODE", "US")
+            }
+            DownloadHelper(this, session).downloadPlaylist(playlistId)
+        }
 
         if (accessToken == null || userId == -1L || playlistId.isEmpty()) {
             finish()
             return
         }
 
-        session = Session().apply {
+        session = Session(this).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode
@@ -121,7 +137,13 @@ class TracksActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(this@TracksActivity, "Error loading tracks: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        android.widget.Toast.makeText(this@TracksActivity, "Connection lost. Switching to Offline Mode.", android.widget.Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@TracksActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        android.widget.Toast.makeText(this@TracksActivity, "Error loading tracks: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }

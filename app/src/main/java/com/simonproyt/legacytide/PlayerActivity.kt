@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.simonproyt.legacytide.api.Session
 import com.simonproyt.legacytide.api.TidalService
 import com.squareup.picasso.Picasso
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,12 +41,14 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var btnPrev: ImageView
     private lateinit var btnNext: ImageView
     private lateinit var btnLyricsToggle: ImageView
+    private lateinit var btnFavorite: ImageView
     private lateinit var btnQuality: TextView
     private lateinit var recyclerLyrics: androidx.recyclerview.widget.RecyclerView
     private lateinit var lyricsAdapter: LyricsAdapter
     private var currentLyricsList: List<com.simonproyt.legacytide.api.models.TimedLyric> = emptyList()
     private var isLyricsVisible = false
     private var maxTrackQuality: String? = null
+    private var isFavorited = false
 
     private val handler = Handler(Looper.getMainLooper())
     private val updateProgressTask = object : Runnable {
@@ -85,6 +88,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (trackId != -1L && trackId != currentTrackId) {
                     currentTrackId = trackId
                     fetchLyrics(trackId)
+                    checkFavoriteStatus(trackId)
                 }
             }
         }
@@ -94,7 +98,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        val session = Session().apply {
+        val session = Session(this).apply {
             accessToken = intent.getStringExtra("ACCESS_TOKEN") ?: ""
             userId = intent.getLongExtra("USER_ID", -1L)
             countryCode = intent.getStringExtra("COUNTRY_CODE") ?: "US"
@@ -111,21 +115,16 @@ class PlayerActivity : AppCompatActivity() {
         btnPlay = findViewById(R.id.btn_play)
         btnPrev = findViewById(R.id.btn_prev)
         btnNext = findViewById(R.id.btn_next)
-        val btnQueue = findViewById<ImageView>(R.id.btn_queue)
-
-        btnQueue.setOnClickListener {
-            val intent = android.content.Intent(this, QueueActivity::class.java)
-            startActivity(intent)
-        }
         btnLyricsToggle = findViewById(R.id.btn_lyrics_toggle)
         btnQuality = findViewById(R.id.btn_quality)
+        btnFavorite = findViewById(R.id.btn_favorite)
+        recyclerLyrics = findViewById(R.id.recycler_lyrics)
         
         // Setup initial quality text
         val prefs = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
         val currentQuality = prefs.getString("audio_quality", "HIGH") ?: "HIGH"
         btnQuality.text = currentQuality
         
-        recyclerLyrics = findViewById(R.id.recycler_lyrics)
         recyclerLyrics.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         lyricsAdapter = LyricsAdapter()
         recyclerLyrics.adapter = lyricsAdapter
@@ -137,6 +136,15 @@ class PlayerActivity : AppCompatActivity() {
         
         btnQuality.setOnClickListener {
             showQualityDialog()
+        }
+
+        btnFavorite.setOnClickListener {
+            toggleFavorite()
+        }
+
+        findViewById<ImageView>(R.id.btn_queue).setOnClickListener {
+            val intent = android.content.Intent(this, QueueActivity::class.java)
+            startActivity(intent)
         }
 
         btnPlay.setOnClickListener {
@@ -182,6 +190,7 @@ class PlayerActivity : AppCompatActivity() {
         if (PlaybackService.currentTrackId != -1L) {
             currentTrackId = PlaybackService.currentTrackId
             fetchLyrics(currentTrackId)
+            checkFavoriteStatus(currentTrackId)
         }
     }
 
@@ -203,8 +212,15 @@ class PlayerActivity : AppCompatActivity() {
         btnPlay.setImageResource(if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
         
         if (cover != null && cover.isNotEmpty()) {
-            val imageUrl = "https://resources.tidal.com/images/${cover.replace('-', '/')}/320x320.jpg"
-            Picasso.with(this).load(imageUrl).placeholder(android.R.color.transparent).into(imgArt)
+            val albumId = PlaybackQueue.getCurrentTrack()?.album?.id
+            val localFile = File(getExternalFilesDir(null), "legacytide_downloads/${albumId}_320.jpg")
+            
+            if (localFile.exists()) {
+                Picasso.with(this).load(localFile).placeholder(android.R.color.transparent).into(imgArt)
+            } else {
+                val imageUrl = "https://resources.tidal.com/images/${cover.replace('-', '/')}/320x320.jpg"
+                Picasso.with(this).load(imageUrl).placeholder(android.R.color.transparent).into(imgArt)
+            }
         } else {
             imgArt.setImageDrawable(null)
         }
@@ -229,6 +245,53 @@ class PlayerActivity : AppCompatActivity() {
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return String.format("%d:%02d", minutes, seconds)
+    }
+
+    private fun checkFavoriteStatus(trackId: Long) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val favorites = tidalService.getFavoriteTracks()
+                isFavorited = favorites.any { it.id == trackId }
+                withContext(Dispatchers.Main) {
+                    updateFavoriteIcon()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun toggleFavorite() {
+        if (currentTrackId == -1L) return
+        
+        isFavorited = !isFavorited
+        updateFavoriteIcon()
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (isFavorited) {
+                    tidalService.addFavoriteTrack(currentTrackId)
+                } else {
+                    tidalService.removeFavoriteTrack(currentTrackId)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Revert UI on failure
+                isFavorited = !isFavorited
+                withContext(Dispatchers.Main) {
+                    updateFavoriteIcon()
+                    android.widget.Toast.makeText(this@PlayerActivity, "Failed to update favorite status", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun updateFavoriteIcon() {
+        if (isFavorited) {
+            btnFavorite.setImageResource(android.R.drawable.btn_star_big_on) // Solid heart or star
+        } else {
+            btnFavorite.setImageResource(android.R.drawable.btn_star_big_off) // Outline heart or star
+        }
     }
 
     private fun parseLyrics(raw: String): List<com.simonproyt.legacytide.api.models.TimedLyric> {

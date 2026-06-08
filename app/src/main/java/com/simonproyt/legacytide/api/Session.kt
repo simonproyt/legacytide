@@ -1,16 +1,20 @@
 package com.simonproyt.legacytide.api
 
+import android.content.Context
 import com.simonproyt.legacytide.api.models.LinkLogin
 import com.simonproyt.legacytide.api.models.OAuthTokenResponse
 import com.google.gson.Gson
+import okhttp3.Authenticator
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import okhttp3.Route
 import org.conscrypt.Conscrypt
 import java.io.IOException
 import java.security.Security
 
-class Session(val config: Config = Config()) {
+class Session(val context: Context? = null, val config: Config = Config()) {
     var client: OkHttpClient
 
     init {
@@ -19,7 +23,32 @@ class Session(val config: Config = Config()) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1)
         }
         
-        client = OkHttpClient.Builder().build()
+        client = OkHttpClient.Builder()
+            .authenticator(object : Authenticator {
+                override fun authenticate(route: Route?, response: Response): Request? {
+                    if (response.request().header("Authorization") != null && response.priorResponse() != null) {
+                        return null // Already retried
+                    }
+                    
+                    synchronized(this@Session) {
+                        // Check if token was refreshed by another thread while waiting
+                        val currentHeaderToken = response.request().header("Authorization")?.removePrefix("Bearer ")
+                        if (currentHeaderToken != null && currentHeaderToken != accessToken) {
+                            // Token already refreshed, just retry with the new one
+                            return response.request().newBuilder()
+                                .header("Authorization", "Bearer $accessToken")
+                                .build()
+                        }
+                        
+                        val newToken = refreshToken() ?: return null
+                        
+                        return response.request().newBuilder()
+                            .header("Authorization", "Bearer $newToken")
+                            .build()
+                    }
+                }
+            })
+            .build()
     }
 
     private val gson = Gson()
@@ -104,6 +133,56 @@ class Session(val config: Config = Config()) {
             sessionId = map["sessionId"] as? String
             countryCode = map["countryCode"] as? String
             userId = (map["userId"] as? Double)?.toLong()
+        }
+    }
+
+    fun refreshToken(): String? {
+        val currentRefreshToken = this.refreshToken ?: context?.getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)?.getString("REFRESH_TOKEN", null)
+        
+        if (currentRefreshToken == null) return null
+        
+        val formBody = FormBody.Builder()
+            .add("client_id", config.clientId)
+            .add("client_secret", config.clientSecret)
+            .add("refresh_token", currentRefreshToken)
+            .add("grant_type", "refresh_token")
+            .add("scope", "r_usr w_usr w_sub")
+            .build()
+
+        val request = Request.Builder()
+            .url(config.apiOauth2Token)
+            .post(formBody)
+            .build()
+            
+        // Use a new client without the authenticator to avoid infinite loops during refresh
+        val tempClient = OkHttpClient.Builder().build()
+
+        try {
+            tempClient.newCall(request).execute().use { response ->
+                val responseBody = response.body()?.string() ?: return null
+                if (!response.isSuccessful) {
+                    return null
+                }
+                
+                val tokenResponse = gson.fromJson(responseBody, OAuthTokenResponse::class.java)
+                this.accessToken = tokenResponse.accessToken
+                if (tokenResponse.refreshToken != null) {
+                    this.refreshToken = tokenResponse.refreshToken
+                }
+                
+                context?.let { ctx ->
+                    val prefs = ctx.getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putString("ACCESS_TOKEN", this.accessToken)
+                        .putString("REFRESH_TOKEN", this.refreshToken)
+                        .apply()
+                }
+                
+                return this.accessToken
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
         }
     }
 }

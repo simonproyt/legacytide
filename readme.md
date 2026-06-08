@@ -12,7 +12,8 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - Artist pages
 - Smol cache of 10mb to make home page loadup faster
 - Up next queue
-- 
+- Offile Downloading and offline playback and offline detection
+- Refresh token support 
 ## What is not working?
 
 
@@ -22,13 +23,17 @@ Becuase I love my blackberry passport and i want to make it more capable for dai
 - No lyrics from the music started from search still broken : fixed
 -  Mixes doesnt work : fixed
 -  Not loading artist page img properly: fixed
-
+-  Wonky offline detection algo: fixed with api timeouts presume that device is offline switch to offline mode then
 ## How to try the app out?
 Download the apk from the releases tab and install it on your device i have no intention of putting it on google play cause legacy devices arent supported anyway    
-
-
 
 ## Also huge thanks for the people who wrote the python tidal api client that i used to understand the api
 
 ## TODO
-      
+- More UI improvements
+- Add coverflow and other cool ui stuff??     
+
+## Screenies of the app
+
+Comming soontm 
+             

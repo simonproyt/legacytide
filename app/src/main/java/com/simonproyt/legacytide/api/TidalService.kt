@@ -69,6 +69,47 @@ class TidalService(private val session: Session) {
         }
     }
 
+    fun addFavoriteTrack(trackId: Long): Boolean {
+        val userId = session.userId ?: throw IllegalStateException("Not logged in")
+        val url = "${session.config.apiV1Location}users/$userId/favorites/tracks"
+        val formBody = okhttp3.FormBody.Builder()
+            .add("trackIds", trackId.toString())
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .post(formBody)
+            .addHeader("Authorization", "Bearer ${session.accessToken}")
+            .build()
+
+        return try {
+            session.client.newCall(request).execute().use { response ->
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    fun removeFavoriteTrack(trackId: Long): Boolean {
+        val userId = session.userId ?: throw IllegalStateException("Not logged in")
+        val url = "${session.config.apiV1Location}users/$userId/favorites/tracks/$trackId"
+        val request = Request.Builder()
+            .url(url)
+            .delete()
+            .addHeader("Authorization", "Bearer ${session.accessToken}")
+            .build()
+
+        return try {
+            session.client.newCall(request).execute().use { response ->
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     fun getFavoriteAlbums(): List<Album> {
         val userId = session.userId ?: throw IllegalStateException("Not logged in")
         val url = "${session.config.apiV1Location}users/$userId/favorites/albums?countryCode=${session.countryCode ?: "US"}&limit=100"

@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        session = Session().apply {
+        session = Session(this).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode
@@ -119,6 +119,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         nowPlayingHelper.onResume()
+        
+        val isOfflinePref = getSharedPreferences("LegacyTidePrefs", MODE_PRIVATE)
+            .getBoolean("offline_mode", false)
+        
+        if (isOfflinePref) {
+            startActivity(Intent(this, DownloadsActivity::class.java))
+            finish()
+        }
     }
 
     override fun onPause() {
@@ -141,7 +149,13 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progressPlaylists.visibility = View.GONE
-                    android.widget.Toast.makeText(this@MainActivity, "Error loading mixes: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        android.widget.Toast.makeText(this@MainActivity, "Connection lost. Switching to Offline Mode.", android.widget.Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "Error loading mixes: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }

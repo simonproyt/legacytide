@@ -50,7 +50,7 @@ class SearchActivity : AppCompatActivity() {
         }
 
         val config = Config()
-        val session = Session(config).apply {
+        val session = Session(this, config).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode
@@ -124,9 +124,15 @@ class SearchActivity : AppCompatActivity() {
                     recyclerSearchResults.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     progressSearch.visibility = View.GONE
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        android.widget.Toast.makeText(this@SearchActivity, "Connection lost. Switching to Offline Mode.", android.widget.Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@SearchActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        android.widget.Toast.makeText(this@SearchActivity, "Error searching: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }

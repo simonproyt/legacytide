@@ -1,5 +1,6 @@
 package com.simonproyt.legacytide
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -14,6 +15,7 @@ import com.simonproyt.legacytide.api.Session
 import com.simonproyt.legacytide.api.TidalService
 import com.simonproyt.legacytide.api.models.Track
 import com.squareup.picasso.Picasso
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,7 +46,7 @@ class AlbumActivity : AppCompatActivity() {
         }
 
         val config = Config()
-        session = Session(config).apply {
+        session = Session(this, config).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode
@@ -60,6 +62,11 @@ class AlbumActivity : AppCompatActivity() {
         val tvTitle = findViewById<TextView>(R.id.tv_album_title)
         tvTitle.text = albumTitle
         
+        findViewById<View>(R.id.btn_download_album).setOnClickListener {
+            Toast.makeText(this, "Preparing album download...", Toast.LENGTH_SHORT).show()
+            DownloadHelper(this, session).downloadAlbum(albumId)
+        }
+
         loadAlbumDetails()
     }
 
@@ -81,8 +88,15 @@ class AlbumActivity : AppCompatActivity() {
                     
                     val uuid = album.cover
                     if (uuid != null && uuid.isNotBlank()) {
-                        val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/320x320.jpg"
-                        Picasso.with(this@AlbumActivity).load(imageUrl).into(ivCover)
+                        val albumId = album.id
+                        val localFile = File(getExternalFilesDir(null), "legacytide_downloads/${albumId}_320.jpg")
+                        
+                        if (localFile.exists()) {
+                            Picasso.with(this@AlbumActivity).load(localFile).into(ivCover)
+                        } else {
+                            val imageUrl = if (uuid.startsWith("http")) uuid else "https://resources.tidal.com/images/${uuid.replace("-", "/")}/320x320.jpg"
+                            Picasso.with(this@AlbumActivity).load(imageUrl).into(ivCover)
+                        }
                     }
                     
                     if (album.releaseDate != null) {
@@ -122,10 +136,15 @@ class AlbumActivity : AppCompatActivity() {
                     recyclerView.adapter = adapter
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(this@AlbumActivity, "Failed to load album", Toast.LENGTH_SHORT).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        Toast.makeText(this@AlbumActivity, "Connection lost. Switching to Offline Mode.", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@AlbumActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@AlbumActivity, "Failed to load album: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

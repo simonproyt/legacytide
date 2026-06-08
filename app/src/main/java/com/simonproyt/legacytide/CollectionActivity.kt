@@ -47,7 +47,7 @@ class CollectionActivity : AppCompatActivity() {
         }
 
         val config = Config()
-        session = Session(config).apply {
+        session = Session(this, config).apply {
             this.accessToken = accessToken
             this.userId = userId
             this.countryCode = countryCode
@@ -74,6 +74,16 @@ class CollectionActivity : AppCompatActivity() {
         btnPlaylists.setOnClickListener { selectTab(0) }
         btnAlbums.setOnClickListener { selectTab(1) }
         btnTracks.setOnClickListener { selectTab(2) }
+
+        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+        }
+
+        findViewById<ImageButton>(R.id.btn_downloads).setOnClickListener {
+            val intent = Intent(this, DownloadsActivity::class.java)
+            startActivity(intent)
+        }
 
         // Load playlists by default
         selectTab(0)
@@ -136,7 +146,13 @@ class CollectionActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(this@CollectionActivity, "Failed to load playlists", Toast.LENGTH_SHORT).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        Toast.makeText(this@CollectionActivity, "Connection lost. Switching to Offline Mode.", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@CollectionActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@CollectionActivity, "Failed to load playlists: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -165,7 +181,13 @@ class CollectionActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(this@CollectionActivity, "Failed to load albums", Toast.LENGTH_SHORT).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        Toast.makeText(this@CollectionActivity, "Connection lost. Switching to Offline Mode.", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@CollectionActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@CollectionActivity, "Failed to load albums: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -202,7 +224,13 @@ class CollectionActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(this@CollectionActivity, "Failed to load tracks", Toast.LENGTH_SHORT).show()
+                    if (e is java.net.SocketTimeoutException || e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                        Toast.makeText(this@CollectionActivity, "Connection lost. Switching to Offline Mode.", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@CollectionActivity, DownloadsActivity::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@CollectionActivity, "Failed to load tracks: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

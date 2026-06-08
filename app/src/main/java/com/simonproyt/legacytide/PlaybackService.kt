@@ -29,6 +29,7 @@ class PlaybackService : Service() {
     private var player: ExoPlayer? = null
     private lateinit var session: Session
     private lateinit var tidalService: TidalService
+    private lateinit var downloadHelper: DownloadHelper
     private var mediaSession: MediaSessionCompat? = null
 
     inner class LocalBinder : android.os.Binder() {
@@ -187,12 +188,13 @@ class PlaybackService : Service() {
             val countryCode = intent.getStringExtra(EXTRA_COUNTRY_CODE)
             
             if (accessToken != null) {
-                session = Session().apply {
+                session = Session(this).apply {
                     this.accessToken = accessToken
                     this.userId = userId
                     this.countryCode = countryCode
                 }
                 tidalService = TidalService(session)
+                downloadHelper = DownloadHelper(this, session)
                 
                 PlaybackQueue.getCurrentTrack()?.let { track ->
                     currentTrackId = track.id
@@ -247,6 +249,31 @@ class PlaybackService : Service() {
         broadcastState()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Offline check
+                val isOfflineMode = getSharedPreferences("LegacyTidePrefs", Context.MODE_PRIVATE)
+                    .getBoolean("offline_mode", false)
+
+                if (::downloadHelper.isInitialized && downloadHelper.isDownloaded(trackId)) {
+                    val uriString = downloadHelper.getLocalFileUri(trackId)
+                    if (uriString != null) {
+                        val mediaItem = MediaItem.fromUri(Uri.parse(uriString))
+                        withContext(Dispatchers.Main) {
+                            player?.setMediaItem(mediaItem)
+                            player?.prepare()
+                            if (startPositionMs > 0) player?.seekTo(startPositionMs)
+                            player?.playWhenReady = true
+                        }
+                        return@launch
+                    }
+                }
+
+                if (isOfflineMode) {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(this@PlaybackService, "Track not available offline", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
                 val track = tidalService.getTrack(trackId)
                 currentTrackQuality = track.audioQuality
                 val quality = getAudioQuality()
